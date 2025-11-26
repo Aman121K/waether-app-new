@@ -1,18 +1,35 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
+import Admin from './components/Admin.jsx'
+import { requestNotificationPermissionAndSaveToken, startPresenceHeartbeat } from './utils/notifications'
+
+const router = createBrowserRouter([
+  { path: '/admin', element: <Admin /> },
+  { path: '/', element: <App /> },
+])
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <RouterProvider router={router} />
   </StrictMode>,
 )
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    navigator.serviceWorker.register('/sw.js').then(async (reg) => {
+      try {
+        const token = await requestNotificationPermissionAndSaveToken(reg)
+        if (token) {
+          startPresenceHeartbeat(token)
+        }
+      } catch {
+        // Ignored
+      }
+    }).catch(() => {
       // No-op: registration failed
-    });
+    })
   });
 }
