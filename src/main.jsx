@@ -4,7 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import Admin from './components/Admin.jsx'
-import { requestNotificationPermissionAndSaveToken, startPresenceHeartbeat } from './utils/notifications'
+import { requestNotificationPermissionAndSaveToken, startPresenceHeartbeat, listenForegroundNotifications } from './utils/notifications'
 
 const router = createBrowserRouter([
   { path: '/admin', element: <Admin /> },
@@ -22,10 +22,13 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').then(async (reg) => {
       try {
         const token = await requestNotificationPermissionAndSaveToken(reg)
+        console.log('token', token)
         if (token) {
           startPresenceHeartbeat(token)
+          listenForegroundNotifications()
         }
       } catch {
+        console.log('error', error)
         // Ignored
       }
     }).catch(() => {

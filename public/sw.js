@@ -71,6 +71,8 @@ try {
   const messaging = firebase.messaging();
 
   messaging.onBackgroundMessage((payload) => {
+    // Log for debugging visibility in DevTools > Application > Service Workers
+    try { console.log('[SW] FCM onBackgroundMessage:', payload) } catch (e) {}
     const title =
       (payload && payload.data && payload.data.title) ||
       (payload && payload.notification && payload.notification.title) ||
@@ -81,6 +83,26 @@ try {
       '';
     self.registration.showNotification(title, { body });
   });
+
+  // Fallback: handle generic Push events in case FCM hook doesn’t fire
+  self.addEventListener('push', (event) => {
+    try { console.log('[SW] push event', event); } catch (e) {}
+    let data = {}
+    try {
+      data = event.data ? event.data.json() : {}
+    } catch (e) {
+      data = { body: event.data && event.data.text ? event.data.text() : '' }
+    }
+    const title =
+      (data && data.title) ||
+      (data && data.notification && data.notification.title) ||
+      'Notification'
+    const body =
+      (data && data.body) ||
+      (data && data.notification && data.notification.body) ||
+      ''
+    event.waitUntil(self.registration.showNotification(title, { body }))
+  })
 
   self.addEventListener('notificationclick', (event) => {
     event.notification.close();
