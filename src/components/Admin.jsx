@@ -38,9 +38,28 @@ const Admin = () => {
     setMessage('')
     setSending(true)
     try {
-      const sendNotificationToActive = httpsCallable(functions, 'sendNotificationToActive')
-      const res = await sendNotificationToActive({ title, body, activeWithinSeconds: 120 })
-      const data = res?.data || {}
+      const apiUrl = import.meta.env.VITE_NOTIFIER_URL
+      let data = null
+      if (apiUrl) {
+        const idToken = await auth.currentUser.getIdToken()
+        const r = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ title, body, sendToAll: true }),
+        })
+        data = await r.json()
+        if (!r.ok) {
+          throw new Error(data?.error || 'Send failed')
+        }
+      } else {
+        // Fallback to Firebase callable: send to all
+        const sendNotificationToAll = httpsCallable(functions, 'sendNotificationToAll')
+        const res = await sendNotificationToAll({ title, body })
+        data = res?.data || {}
+      }
       setMessage(`Sent to ${data.sent || 0} device(s). Invalid: ${data.invalid || 0}`)
       setTitle('')
       setBody('')
